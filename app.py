@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import google.generativeai as genai
 import os
-import jso
+import json
 import re
 
 app = Flask(__name__)
@@ -44,7 +44,7 @@ Prim S/N ON: XA00675-51884, Sec S/N ON: XA00675-51887
 Fully Operational"
 
 Example output:
-{"tail": "N275", "location": "MKE", "LRU": "MDU-D", "removal_reason": "Performance Issues", "off_sn": "XA00440-51067", "on_sn": "XA00675-51884", "status": "Fully Operational", "notes": "Secondary unit also present - off_sn: XA00440-51126, on_sn: XA00675-51887"}
+{{"tail": "N275", "location": "MKE", "LRU": "MDU-D", "removal_reason": "Performance Issues", "off_sn": "XA00440-51067", "on_sn": "XA00675-51884", "status": "Fully Operational", "notes": "Secondary unit also present - off_sn: XA00440-51126, on_sn: XA00675-51887"}}
 
 Email text to extract from:
 {email_text}
@@ -71,7 +71,7 @@ def parse_email():
         end = raw.rfind('}') + 1
         if start == -1 or end == 0:
             return jsonify({"error": "No JSON object found in response", "raw": raw}), 500
-        
+
         json_str = raw[start:end]
         parsed = json.loads(json_str)
         return jsonify(parsed)
