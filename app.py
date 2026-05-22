@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import google.generativeai as genai
 import os
-import json
+import jso
 import re
 
 app = Flask(__name__)
@@ -66,11 +66,18 @@ def parse_email():
         # Strip markdown code blocks if present
         raw = re.sub(r"```json|```", "", raw).strip()
 
-        parsed = json.loads(raw)
+        # Find the first { and last } to extract just the JSON object
+        start = raw.find('{')
+        end = raw.rfind('}') + 1
+        if start == -1 or end == 0:
+            return jsonify({"error": "No JSON object found in response", "raw": raw}), 500
+        
+        json_str = raw[start:end]
+        parsed = json.loads(json_str)
         return jsonify(parsed)
 
-    except json.JSONDecodeError:
-        return jsonify({"error": "Failed to parse JSON from AI response", "raw": raw}), 500
+    except json.JSONDecodeError as e:
+        return jsonify({"error": "Failed to parse JSON", "details": str(e), "raw": raw}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
