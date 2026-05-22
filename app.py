@@ -1,13 +1,12 @@
 from flask import Flask, request, jsonify
-import google.generativeai as genai
+from groq import Groq
 import os
 import json
 import re
 
 app = Flask(__name__)
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.0-flash")
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 PROMPT_TEMPLATE = """
 You are a data extraction assistant. Extract structured data from an LRU removal email.
@@ -44,10 +43,7 @@ Prim S/N ON: XA00675-51884, Sec S/N ON: XA00675-51887
 Fully Operational"
 
 Example output:
-{{"tail": "N275", "location": "MKE", "LRU": "MDU-D", "removal_reason": "Performance Issues", "off_sn": "XA00440-51067", "on_sn": "XA00675-51884", "status": "Fully Operational", "notes": "Secondary unit also present - off_sn: XA00440-51126, on_sn: XA00675-51887"}}
-
-Email text to extract from:
-{email_text}
+{"tail": "N275", "location": "MKE", "LRU": "MDU-D", "removal_reason": "Performance Issues", "off_sn": "XA00440-51067", "on_sn": "XA00675-51884", "status": "Fully Operational", "notes": "Secondary unit also present - off_sn: XA00440-51126, on_sn: XA00675-51887"}
 """
 
 @app.route("/parse", methods=["POST"])
@@ -59,9 +55,22 @@ def parse_email():
         if not email_text:
             return jsonify({"error": "No email_text provided"}), 400
 
-        prompt = PROMPT_TEMPLATE.format(email_text=email_text)
-        response = model.generate_content(prompt)
-        raw = response.text.strip()
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": PROMPT_TEMPLATE
+                },
+                {
+                    "role": "user",
+                    "content": email_text
+                }
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.1
+        )
+
+        raw = chat_completion.choices[0].message.content.strip()
 
         # Strip markdown code blocks if present
         raw = re.sub(r"```json|```", "", raw).strip()
